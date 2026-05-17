@@ -1,0 +1,107 @@
+# --- Secrets (NEVER COMMIT) ---
+*.env
+*.envrc
+secrets/
+**/api_key*
+**/*token*
+**/*secret*
+**/credentials*
+
+# --- Swift / SPM ---
+.build/
+.swiftpm/
+Package.resolved
+*.xcodeproj/
+*.xcworkspace/
+DerivedData/
+
+# --- macOS ---
+.DS_Store
+._*
+
+# --- Build outputs ---
+*.dmg
+dist/StatusOrbit.app/
+dist/*.dmg
+dist/*.sha256
+
+# ============================================================
+# 비텍스트 파일 — Hugging Face 동기화 관리 (j00n98/Claude-Code-Storage)
+# 본 프로젝트는 실제 비텍스트 자산 0개이지만 정책 일치를 위해 명시
+# ============================================================
+
+# 이미지
+*.jpg
+*.jpeg
+*.JPG
+*.JPEG
+*.png
+*.PNG
+*.gif
+*.GIF
+*.webp
+*.svg
+*.ico
+*.bmp
+*.tiff
+*.heic
+*.heif
+
+# 문서
+*.pdf
+*.PDF
+*.docx
+*.doc
+*.pptx
+*.ppt
+*.xlsx
+*.xls
+*.hwp
+
+# 데이터
+*.csv
+*.pkl
+*.pickle
+*.h5
+*.hdf5
+*.parquet
+*.feather
+*.arrow
+*.npy
+*.npz
+
+# ML 모델
+*.pt
+*.pth
+*.onnx
+*.safetensors
+*.bin
+*.model
+*.weights
+
+# 미디어
+*.mp4
+*.mp3
+*.wav
+*.mov
+*.avi
+*.mkv
+*.flac
+*.m4a
+
+# 압축
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+
+# --- Ouroboros local state ---
+.ouroboros/events/*.jsonl
+.ouroboros/gates/last_run.log

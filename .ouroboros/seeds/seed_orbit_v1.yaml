@@ -1,0 +1,240 @@
+# ============================================================
+# Status Orbit Menubar — Frozen Seed v1
+# ============================================================
+# IMMUTABLE: 본 파일은 작성 후 수정 금지.
+# 변경이 필요하면 parent_seed_id 를 이 시드로 가리키는
+# seed_orbit_v2.yaml 을 새로 생성하여 lineage 를 분기할 것.
+# ============================================================
+
+goal: |
+  macOS 메뉴바에서 AI 서비스 5개(ChatGPT, Claude, Gemini, NotebookLM, Grok)와
+  개발 인프라 6개(GitHub, Cloudflare, Vercel, Supabase, Netlify, Railway)의
+  실시간 가동 상태를 종합 점 1개로 표시하고, popover 로 카테고리별 상세 보기
+  + 7일 sparkline 을 제공하며, degraded 이상 상태 변화 발생 시
+  macOS UserNotification 과 Resend 이메일(alerts@joonlab98.com → e4netpj@gmail.com)
+  로 알림을 보내는 매일 사용 가능한 1MB 미만 네이티브 SwiftUI 메뉴바 앱을 구축한다.
+
+constraints:
+  - macOS 13 이상 (Apple Silicon arm64)
+  - Swift 5.9+ / SwiftUI / AppKit (NSStatusItem)
+  - 외부 의존성 0 개 (시스템 프레임워크 + GRDB.swift 또는 native SQLite C API 만)
+  - 메인 바이너리 1MB 미만 (원본 AIStatusMenubar 와 동일 수준)
+  - LSUIElement=true (Dock 없는 메뉴바 전용)
+  - 외부 네트워크 호출은 (a) 11 개 status endpoint 와 (b) Resend API 한정
+  - API 키 (Resend) 는 macOS Keychain 에 저장, 코드/파일 시스템에 평문 금지
+  - 모든 이력 데이터는 ~/Library/Application Support/StatusOrbit/ 로컬 SQLite 한정
+  - 폴링 주기 기본 60 초, 장애 발생 시 30→60→120→300 초 지수 백오프
+  - 동일 (service, level) 알림 1 시간 내 중복 발화 금지
+
+acceptance_criteria:
+  # === A. 데이터 레이어 ===
+  - id: AC1
+    name: 11_개_status_provider_구현
+    detail: |
+      StatusProvider 프로토콜 채택 4 종 (StatuspageV2, CustomStatuspageV2,
+      GoogleCloudIncident, XAIRSS) + GitHub/Cloudflare/Vercel/Supabase/Netlify/Railway
+      용 어댑터 구현. 각 fetchStatus() 가 ServiceStatus(level, message, incidents,
+      fetchedAt) 반환.
+    measurable: 11 개 서비스 동시 호출 시 모두 ServiceStatus 객체 반환, 어느 하나도 nil 아님.
+
+  - id: AC2
+    name: SQLite_이력_저장
+    detail: |
+      ServiceStatus 변화(level 이 직전과 다를 때) 마다 incidents 테이블에 1 row 기록.
+      schema: id, service_id, level, message, started_at, ended_at(nullable), category.
+    measurable: 7 일 폴링 후 incidents 테이블에 N 행 존재, 모든 row 의 ended_at 이
+      다음 level 변화의 started_at 과 일치 또는 NULL(현재 진행 중).
+
+  - id: AC3
+    name: HTTP_캐싱_actor
+    detail: |
+      HTTPRequestCache (actor) 가 동일 URL 동시 요청을 1 회로 dedupe + ETag/Last-Modified
+      304 처리. 폴링 라운드마다 cached body 재사용으로 대역폭 절감.
+    measurable: 11 endpoint 60 초 폴링 1 시간 후 누적 다운로드 < 500 KB.
+
+  # === B. UI 레이어 ===
+  - id: AC4
+    name: 메뉴바_종합_아이콘
+    detail: |
+      NSStatusItem 에 종합 StatusLevel (11 개 중 최악) 색상 점 1 개 표시.
+      operational=초록, degraded_performance=노랑, degraded=주황, major/critical=빨강,
+      maintenance/unknown=회색. StatusIconRenderer 캐싱 사용.
+    measurable: 11 개 status 가 모두 operational 일 때 초록, 1 개라도 critical 이면 빨강.
+
+  - id: AC5
+    name: Popover_2섹션_레이아웃
+    detail: |
+      MenuBarView SwiftUI: 상단에 "AI" 헤더 + 5 행, 구분선, "Infrastructure" 헤더 + 6 행.
+      각 행에 색상 점 + 서비스명 + 1 줄 메시지. 행 클릭 시 해당 서비스 공식 status 페이지를
+      기본 브라우저로 open. 하단에 "환경설정" + "History 보기" 버튼.
+    measurable: popover 폭 320px, 모든 11 행이 스크롤 없이 표시.
+
+  - id: AC6
+    name: Sparkline_7일
+    detail: |
+      각 popover 행 우측에 가로 60×16px sparkline. 지난 7 일을 168 칸(시간 단위)으로 나눠
+      각 칸의 worst level 을 색칠. SwiftUI Canvas 직접 그리기.
+    measurable: 데이터 1 일치 이상 누적된 후 sparkline 이 11 행 모두에 렌더됨.
+
+  - id: AC7
+    name: History_창
+    detail: |
+      별도 NSWindow + SwiftUI HistoryView. 기간 필터 (1일/7일/30일), 카테고리 필터(AI/Infra/All),
+      날짜별 incident 리스트, 우측 사이드에 서비스별 월간 다운타임 합계 (분 단위).
+    measurable: 30 일 모의 데이터 주입 후 필터 변경 시 100ms 내 재렌더.
+
+  # === C. 알림 레이어 ===
+  - id: AC8
+    name: macOS_UserNotification
+    detail: |
+      NotificationController 가 level 이 operational → 비-operational 로 전환되거나
+      비-operational 간 격상되면 알림. 동일 (serviceId, level) 1 시간 내 중복 차단.
+      회복 알림 (PreferencesStore.recoveryNotificationsEnabled) toggle.
+    measurable: 동일 서비스 1 시간 내 degraded 알림이 2 번 발화되지 않음.
+
+  - id: AC9
+    name: Resend_이메일_발송
+    detail: |
+      ResendNotifier: AC8 이 발화되면 동시에 Resend POST /emails 호출.
+      from=alerts@joonlab98.com, to=e4netpj@gmail.com,
+      subject=[Status Orbit] <서비스명> → <level>, body=HTML 템플릿.
+      API 키는 Keychain (kSecAttrService=com.joon.statusorbit, kSecAttrAccount=resend).
+      네트워크 실패 시 silent fail + os_log.
+    measurable: 환경설정에서 "테스트 알림 보내기" 버튼 누르면 1 초 내 이메일 도착.
+
+  # === D. 운영 ===
+  - id: AC10
+    name: 환경설정_View
+    detail: |
+      PreferencesView: 서비스 11 개 toggle, 폴링 주기 조정 (30/60/120/300), 알림 토글
+      (macOS/Email/Recovery 각각), 자동시작 toggle (SMAppService),
+      "Resend API Key 설정" 버튼 (NSSecureTextField), "테스트 알림" 버튼.
+    measurable: 모든 토글이 UserDefaults / Keychain 에 즉시 영속, 앱 재시작 후 유지.
+
+  - id: AC11
+    name: 빌드_단일_실행파일
+    detail: |
+      `swift build -c release` 로 단일 .app 빌드. xcodebuild 의존 없음.
+      build/release/StatusOrbit.app/Contents/MacOS/StatusOrbit 바이너리 크기 < 1.5MB.
+    measurable: `swift build -c release && du -sh .build/release/StatusOrbit.app` 결과 1.5MB 미만.
+
+  - id: AC12
+    name: DMG_배포_스크립트
+    detail: |
+      scripts/release.sh 가 swift build → codesign (ad-hoc) → DMG 패키징 (create-dmg or hdiutil) → SHA256 출력.
+      README.md 의 설치 가이드 (원본 형식 차용, 한국어).
+    measurable: `bash scripts/release.sh` 1 회 실행으로 dist/StatusOrbit-0.1.0.dmg 생성.
+
+ontology_schema:
+  name: StatusOrbitOntology
+  version: 1
+  entities:
+    - name: ServiceCategory
+      kind: enum
+      cases: [AI, Infrastructure]
+    - name: StatusLevel
+      kind: enum
+      cases: [operational, degraded_performance, degraded, major, critical, maintenance, unknown]
+      ordering: worst_first  # critical > major > degraded > degraded_performance > maintenance > unknown > operational
+    - name: ServiceKind
+      kind: enum
+      cases: [statuspageV2, customStatuspageV2, googleCloudIncident, xaiRSS, githubStatus, vercelStatus, cloudflareStatus, supabaseStatus, netlifyStatus, railwayStatus]
+    - name: ServiceDefinition
+      kind: struct
+      fields:
+        - {name: id, type: String, required: true}
+        - {name: name, type: String, required: true}
+        - {name: category, type: ServiceCategory, required: true}
+        - {name: kind, type: ServiceKind, required: true}
+        - {name: baseURL, type: URL, required: true}
+        - {name: homepageURL, type: URL, required: true}
+        - {name: enabled, type: Bool, default: true}
+        - {name: pollIntervalSeconds, type: Int, default: 60}
+    - name: ServiceStatus
+      kind: struct
+      fields:
+        - {name: serviceId, type: String}
+        - {name: level, type: StatusLevel}
+        - {name: message, type: String, optional: true}
+        - {name: fetchedAt, type: Date}
+        - {name: incidents, type: '[IncidentSummary]'}
+    - name: IncidentSummary
+      kind: struct
+      fields: [id, title, impact, status, url, updatedAt]
+    - name: IncidentRecord
+      kind: sqlite_table
+      fields:
+        - {name: id, type: TEXT, primary_key: true}
+        - {name: service_id, type: TEXT, indexed: true}
+        - {name: level, type: TEXT}
+        - {name: message, type: TEXT}
+        - {name: started_at, type: INTEGER, indexed: true}
+        - {name: ended_at, type: INTEGER, nullable: true}
+        - {name: category, type: TEXT}
+    - name: NotificationChannel
+      kind: enum
+      cases: [macOSUserNotification, resendEmail]
+    - name: AlertEvent
+      kind: struct
+      fields: [serviceId, fromLevel, toLevel, channels, sentAt, deduped]
+
+evaluation_principles:
+  - name: services_all_polled
+    weight: 0.15
+    rubric: "11 개 서비스 모두 ServiceStatus 정상 반환 (AC1)"
+  - name: incident_persistence
+    weight: 0.10
+    rubric: "SQLite 에 level 전환마다 row 정확히 1 개 (AC2)"
+  - name: bandwidth_efficiency
+    weight: 0.05
+    rubric: "1 시간 누적 다운로드 < 500KB (AC3)"
+  - name: ui_aggregate_correctness
+    weight: 0.10
+    rubric: "최악 level 이 종합 아이콘 색상으로 정확 매핑 (AC4)"
+  - name: popover_layout_quality
+    weight: 0.10
+    rubric: "2 섹션 11 행 스크롤 없이 표시 + 행 클릭 동작 (AC5)"
+  - name: sparkline_render
+    weight: 0.05
+    rubric: "7 일 sparkline 모든 행 렌더 (AC6)"
+  - name: history_window
+    weight: 0.05
+    rubric: "필터 변경 100ms 내 재렌더 (AC7)"
+  - name: notification_dedup
+    weight: 0.10
+    rubric: "1 시간 내 중복 알림 0 회 (AC8)"
+  - name: email_delivery
+    weight: 0.10
+    rubric: "Resend 발송 1 초 내 도착 (AC9)"
+  - name: preferences_persistence
+    weight: 0.05
+    rubric: "모든 환경설정 재시작 후 유지 (AC10)"
+  - name: binary_size_constraint
+    weight: 0.10
+    rubric: "release 바이너리 < 1.5MB (AC11)"
+  - name: release_script_atomic
+    weight: 0.05
+    rubric: "1 명령 DMG 생성 (AC12)"
+
+exit_conditions:
+  - description: 모든 AC pass + Mechanical+Semantic 게이트 통과 + 사용자 1 일 dogfooding 완료
+  - description: ontology similarity ≥ 0.95 가 다음 2 세대 연속 (현 프로젝트에서는 평가만)
+  - description: 30 세대 hard cap (현 프로젝트는 generation 1 ~ 3 안에 완료 목표)
+
+metadata:
+  seed_id: seed_orbit_v1
+  parent_seed_id: null
+  lineage_id: lineage_orbit
+  generation: 1
+  created_at: 2026-05-17
+  ambiguity_score: 0.1525
+  ambiguity_gate_passed: true
+  ambiguity_threshold: 0.20
+  authored_by: joon (with claude-opus-4-7)
+  inspired_by:
+    - source: cfcf26/ai-status-menubar-dmg (DMG reverse engineered)
+    - source: Q00/ouroboros v0.38.2 (methodology)
+  notes: |
+    원본 AIStatusMenubar 의 reverse-engineered 구조(StatusProvider 패턴, HTTPRequestCache actor,
+    PollingPolicy 백오프, NotificationController dedup)를 일급 모티프로 채택하되,
+    Infrastructure 6 개 + SQLite 이력 + History 창 + Resend 이메일을 추가로 박았다.
