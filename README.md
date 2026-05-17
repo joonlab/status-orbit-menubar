@@ -66,7 +66,7 @@
 
 - macOS 13+ (Apple Silicon)
 - Swift 5.9+ (Xcode 또는 SwiftPM)
-- Resend API 키 (이메일 알림 사용 시) — joonlab98.com 도메인 인증 완료
+- Resend API 키 (이메일 알림 사용 시) — Resend 계정에서 본인 도메인 인증 (DKIM/SPF) 필요
 
 ## 빌드 + 실행
 
