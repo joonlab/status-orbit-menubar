@@ -41,14 +41,14 @@ final class PreferencesStore: ObservableObject {
             Key.notif:      true,
             Key.recov:      false,
             Key.email:      false,
-            Key.recipient:  "wns9133@gmail.com",
+            Key.recipient:  "you@example.com",
             Key.poll:       60,
             Key.disabledIds: [] as [String]
         ])
         self.notificationsEnabled         = defaults.bool(forKey: Key.notif)
         self.recoveryNotificationsEnabled = defaults.bool(forKey: Key.recov)
         self.emailNotificationsEnabled    = defaults.bool(forKey: Key.email)
-        self.emailRecipient               = defaults.string(forKey: Key.recipient) ?? "wns9133@gmail.com"
+        self.emailRecipient               = defaults.string(forKey: Key.recipient) ?? "you@example.com"
         self.pollIntervalSeconds          = defaults.integer(forKey: Key.poll)
         let arr = defaults.array(forKey: Key.disabledIds) as? [String] ?? []
         self.disabledServiceIds           = Set(arr)

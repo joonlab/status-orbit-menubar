@@ -3,7 +3,7 @@
 > 본 문서는 새 Claude 세션에서 본 프로젝트를 이어 진행하기 위한 단일 진입점.
 
 ## 한 줄 요약
-`/Users/joon/Desktop/10_프로젝트/날짜별/2026/20260517_status-orbit-menubar/.ouroboros/seeds/seed_orbit_v2.yaml` 를 frozen spec 으로 두고, `REFLECT.md` 의 Generation 3 후보 AC 를 구현하면 됨.
+`$PROJECT_ROOT/.ouroboros/seeds/seed_orbit_v2.yaml` 를 frozen spec 으로 두고, `REFLECT.md` 의 Generation 3 후보 AC 를 구현하면 됨.
 
 ## 현 상태 (Generation 3 완료 — 모든 AC 통과)
 
@@ -36,7 +36,9 @@
 ## 빠른 점검 (5 명령)
 
 ```bash
-PROJ="/Users/joon/Desktop/10_프로젝트/날짜별/2026/20260517_status-orbit-menubar"
+# 본인 환경에 맞게 PROJ 설정
+PROJECT_ROOT="$(pwd)"
+PROJ="$PROJECT_ROOT"
 
 # 1) 빌드 확인
 cd "$PROJ/src" && swift build
@@ -66,12 +68,12 @@ killall StatusOrbit
 ## 주의사항
 
 - `.ouroboros/seeds/*.yaml` 은 **frozen** — 절대 수정 금지. 변경 필요 시 신규 seed 로 분기.
-- Resend 발송 시 `to` 는 현재 `wns9133@gmail.com` 하드코딩. PreferencesView 에서 변경 가능하게 만들 것 (AC10).
+- Resend 발송 시 `to` 의 기본값은 `you@example.com` placeholder. 첫 실행 후 환경설정 UI 에서 본인 이메일로 변경.
 - SourceKit 진단 (`Cannot find type X in scope`) 은 매번 false alarm — 무시. 실제 검증은 `swift build`.
 - `git init` 안 했음. 의도적. Generation 3 완료 후 git 초기화 권장.
 
 ## 사용된 외부 자원
 
-- Resend API: `joonlab98.com` 도메인 인증 완료, send-only 키 Keychain 저장
+- Resend API: 본인 도메인 인증 + send-only 키 Keychain 저장 (코드에 평문 키 없음)
 - macOS Keychain: `com.joon.statusorbit` / `resend` account
 - 10 개 status endpoint (모두 공개·인증 불필요)

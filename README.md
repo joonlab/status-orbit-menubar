@@ -7,6 +7,18 @@
 **원본 영감**: [cfcf26/ai-status-menubar-dmg](https://github.com/cfcf26/ai-status-menubar-dmg) (DMG 만 공개된 소스)
 **방법론**: [Ouroboros](https://github.com/Q00/ouroboros) — Spec-first Agent OS
 **상태**: Generation 3 — 12 AC 모두 ✅ · release.app 1.2 MB / DMG 620 KB · dogfooding ready
+**라이선스**: [MIT](./LICENSE)
+
+> ### 🧭 이 repo 가 다른 menubar 앱과 다른 점
+>
+> 본 코드 자체보다 **`.ouroboros/` 폴더의 한 사이클 실측 기록**이 더 큰 가치입니다.
+> Ouroboros 의 spec-first 방법론을 글로벌 오염 없이 *단일 프로젝트에 격리* 해서
+> 약 2~3시간에 한 사이클 (Interview → Seed → Execute → Evaluate → Reflect)
+> 완주한 실측 사례 — Ambiguity 0.44 → 0.15 → Seed v1/v2 lineage 분기 →
+> 12 AC 중 9 → 12 → Evaluate score 0.797 → 0.955 의 흐름이 그대로 남아있습니다.
+>
+> 본인 프로젝트에 같은 패턴을 적용하려면 `.ouroboros/seeds/seed_orbit_v1.yaml`
+> 과 `EVALUATION.md` 의 가중치 계산 구조를 그대로 복사해 사용 가능합니다.
 
 ---
 

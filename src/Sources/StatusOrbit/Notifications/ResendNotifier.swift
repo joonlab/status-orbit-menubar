@@ -7,8 +7,10 @@ import os
 struct ResendNotifier: Sendable {
 
     static let endpoint = URL(string: "https://api.resend.com/emails")!
-    static let from = "Status Orbit <alerts@joonlab98.com>"
-    static let defaultTo = "wns9133@gmail.com"  // PreferencesStore.emailRecipient 로 override
+    // 발송 도메인은 본인 Resend 계정에서 인증한 도메인으로 변경 (DKIM/SPF 필수).
+    // 환경설정 UI 에서 변경 가능하게 PreferencesStore.emailRecipient 도 함께 사용.
+    static let from = "Status Orbit <alerts@example.com>"
+    static let defaultTo = "you@example.com"  // 첫 실행 후 환경설정에서 본인 이메일로 변경
 
     let logger = Logger(subsystem: "com.joon.statusorbit", category: "ResendNotifier")
 
