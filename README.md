@@ -2,6 +2,8 @@
 
 > macOS 메뉴바에서 AI 5 개 + 개발 인프라 5 개 = 총 **10 개 서비스 가동 상태**를 한 점으로 표시하고, 변화가 있으면 macOS 알림 + 이메일로 알려주는 1 MB 미만 SwiftUI 메뉴바 앱.
 
+**Repository (private)**: https://github.com/joonlab/status-orbit-menubar
+
 **원본 영감**: [cfcf26/ai-status-menubar-dmg](https://github.com/cfcf26/ai-status-menubar-dmg) (DMG 만 공개된 소스)
 **방법론**: [Ouroboros](https://github.com/Q00/ouroboros) — Spec-first Agent OS
 **상태**: Generation 3 — 12 AC 모두 ✅ · release.app 1.2 MB / DMG 620 KB · dogfooding ready
