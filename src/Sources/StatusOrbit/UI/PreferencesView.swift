@@ -60,12 +60,22 @@ struct PreferencesView: View {
                     Text(authStatusLabel)
                         .foregroundStyle(notifAuthStatus == .authorized ? .green : .orange)
                     Spacer()
+                    if notifAuthStatus == .denied {
+                        Button("시스템 설정 열기") {
+                            openNotificationSettings()
+                        }
+                    }
                     Button("테스트 알림") {
                         Task {
                             await NotificationController.shared.sendTestMacNotification()
                             testStatus = "✅ macOS 알림 발송"
                         }
                     }
+                }
+                if notifAuthStatus == .denied {
+                    Text("권한이 거부된 상태입니다. 위 버튼으로 시스템 설정을 열고\nStatus Orbit 의 \"알림 허용\" 토글을 ON 으로 변경하세요.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
             }
             Section(header: Text("이메일 알림 (Resend)")) {
@@ -181,6 +191,15 @@ struct PreferencesView: View {
         await MainActor.run {
             notifAuthStatus = settings.authorizationStatus
             launchAtLogin = SMAppService.mainApp.status == .enabled
+        }
+    }
+
+    private func openNotificationSettings() {
+        // macOS 13+ 알림 환경설정 패널로 deep-link.
+        // 특정 앱 까지 자동 점프하는 안정 API 는 없어, 시스템 설정의
+        // "알림" 패널만 열고 사용자가 목록에서 Status Orbit 을 직접 선택.
+        if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
+            NSWorkspace.shared.open(url)
         }
     }
 }
